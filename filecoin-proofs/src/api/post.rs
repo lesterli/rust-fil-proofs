@@ -21,12 +21,10 @@ use storage_proofs::proof::NoRequirements;
 use storage_proofs::sector::*;
 use storage_proofs::stacked::CacheKey;
 
-use crate::api::util::as_safe_commitment;
+use crate::api::util::{as_safe_commitment, get_tree_size};
 use crate::caches::{get_post_params, get_post_verifying_key};
 use crate::parameters::post_setup_params;
-use crate::types::{
-    ChallengeSeed, Commitment, PersistentAux, PoStConfig, ProverId, SectorSize, Tree,
-};
+use crate::types::{ChallengeSeed, Commitment, PersistentAux, PoStConfig, ProverId, Tree};
 
 pub use storage_proofs::election_post::Candidate;
 
@@ -92,10 +90,6 @@ impl PrivateReplicaInfo {
         Ok(self.aux.comm_c)
     }
 
-    pub fn safe_comm_q(&self) -> Result<<DefaultTreeHasher as Hasher>::Domain> {
-        Ok(self.aux.comm_q)
-    }
-
     pub fn safe_comm_r_last(&self) -> Result<<DefaultTreeHasher as Hasher>::Domain> {
         Ok(self.aux.comm_r_last)
     }
@@ -145,13 +139,6 @@ impl PublicReplicaInfo {
     pub fn safe_comm_r(&self) -> Result<<DefaultTreeHasher as Hasher>::Domain> {
         as_safe_commitment(&self.comm_r, "comm_r")
     }
-}
-
-fn get_tree_size(sector_size: SectorSize) -> usize {
-    let sector_size = u64::from(sector_size);
-    let elems = sector_size as usize / std::mem::size_of::<<DefaultTreeHasher as Hasher>::Domain>();
-
-    2 * elems - 1
 }
 
 /// Generates proof-of-spacetime candidates for ElectionPoSt.
@@ -214,7 +201,7 @@ pub fn generate_candidates(
     unique_challenged_replicas.sort_unstable(); // dedup requires a sorted list
     unique_challenged_replicas.dedup();
 
-    let tree_size = get_tree_size(post_config.sector_size);
+    let tree_size = get_tree_size::<<DefaultTreeHasher as Hasher>::Domain>(post_config.sector_size);
     let tree_leafs = get_merkle_tree_leafs(tree_size);
 
     let unique_trees_res: Vec<_> = unique_challenged_replicas
@@ -282,7 +269,7 @@ pub fn generate_post(
         ElectionPoStCompound::setup(&setup_params)?;
     let groth_params = get_post_params(post_config)?;
 
-    let tree_size = get_tree_size(post_config.sector_size);
+    let tree_size = get_tree_size::<<DefaultTreeHasher as Hasher>::Domain>(post_config.sector_size);
     let tree_leafs = get_merkle_tree_leafs(tree_size);
 
     let mut proofs = Vec::with_capacity(winners.len());
@@ -306,12 +293,10 @@ pub fn generate_post(
             };
 
             let comm_c = replica.safe_comm_c()?;
-            let comm_q = replica.safe_comm_q()?;
             let comm_r_last = replica.safe_comm_r_last()?;
             let priv_inputs = election_post::PrivateInputs::<DefaultTreeHasher> {
                 tree,
                 comm_c,
-                comm_q,
                 comm_r_last,
             };
 
