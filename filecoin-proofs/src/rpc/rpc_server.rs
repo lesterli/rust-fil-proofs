@@ -3,17 +3,17 @@ use std::net::SocketAddr;
 use jsonrpc_core::{Error, ErrorCode, IoHandler, Params, Value};
 use jsonrpc_http_server::{Server, ServerBuilder, RestApi};
 
-struct RpcServer {
-	uri: String,
+pub struct RpcServer {
+	pub uri: String,
 	socket_addr: SocketAddr,
 	server: Option<Server>,
 }
 
 impl RpcServer {
-	fn serve<F: FnOnce(ServerBuilder) -> ServerBuilder>(alter: F) -> Self {
+	pub fn serve<F: FnOnce(ServerBuilder) -> ServerBuilder>(alter: F) -> Self {
 		let builder = ServerBuilder::new(rpc_handler()).rest_api(RestApi::Unsecure);
 
-		let server = alter(builder).start_http(&"127.0.0.1:40002".parse().unwrap()).unwrap();
+		let server = alter(builder).start_http(&"127.0.0.1:0".parse().unwrap()).unwrap();
 		let socket_addr = server.address().clone();
 		let uri = format!("http://{}", socket_addr);
 
