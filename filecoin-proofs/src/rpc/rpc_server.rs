@@ -13,7 +13,7 @@ impl RpcServer {
 	fn serve<F: FnOnce(ServerBuilder) -> ServerBuilder>(alter: F) -> Self {
 		let builder = ServerBuilder::new(rpc_handler()).rest_api(RestApi::Unsecure);
 
-		let server = alter(builder).start_http(&"127.0.0.1:0".parse().unwrap()).unwrap();
+		let server = alter(builder).start_http(&"127.0.0.1:40002".parse().unwrap()).unwrap();
 		let socket_addr = server.address().clone();
 		let uri = format!("http://{}", socket_addr);
 
